@@ -1,0 +1,7 @@
+scene,nodes,root_id,tx_range,directed_edges,geom_unique,geom_min,geom_p25,geom_p50,geom_p75,geom_max,slack_unique,slack_min,slack_p25,slack_p50,slack_p75,slack_p90,slack_max
+s1_stable_20,20,3,50.0,218,6,0,0,0,177,202,7,0,32,32,32,418,468
+s1_stable_40,40,3,50.0,1198,6,0,0,0,0,202,7,0,32,32,32,32,468
+s2_disturb_20,20,1,50.0,380,4,0,0,0,0,186,6,0,32,32,32,144,436
+s2_disturb_40,40,1,50.0,1560,4,0,0,0,0,186,6,0,32,32,32,32,436
+s3_rootloss_20,20,3,50.0,218,7,0,0,0,168,220,8,0,32,32,32,400,504
+s3_rootloss_40,40,3,50.0,1198,7,0,0,0,0,220,8,0,32,32,32,32,504

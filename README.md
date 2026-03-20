@@ -7,8 +7,8 @@ This repository releases the code scaffold, Contiki-NG patch set, and compact re
 It is intentionally structured as a patch-style repository on top of Contiki-NG rather than a full fork. The goal is to keep the ownership boundary clear:
 
 - upstream Contiki-NG stays upstream;
-- this repository contains the filter-specific modifications, new modules, and experiment helpers;
-- large result directories, temporary logs, and submission assets are excluded.
+- this repository contains the filter-specific modifications, new modules, experiment helpers, and processed summary data used in the manuscript;
+- large raw result directories, temporary logs, and submission assets are excluded.
 
 ## At a glance
 
@@ -83,19 +83,20 @@ Included code covers three parts.
 - figure generation helper
 - footprint measurement helper
 - compact CSV/Markdown summaries used in the manuscript workflow
+- processed result overviews, appendix tables, overhead summaries, and statistical summaries
 
 ## Intentionally excluded
 
 This repository does not include:
 
 - the full Contiki-NG source tree
-- large simulation result directories
+- large raw simulation result directories
 - temporary debug wrappers and local retry scripts
 - LaTeX submission sources and PDFs
 - local logs, caches, and generated paper assets
 - generated prior headers such as `rpl-gate-prior-data.h`
 
-The generated prior header is topology-dependent and should be regenerated from the provided scripts.
+The generated prior header is topology-dependent and should be regenerated from the provided scripts. Processed summary data and compact manuscript-support artifacts are included under `artifact/`.
 
 ## Applying the code to a clean Contiki-NG checkout
 
@@ -146,7 +147,7 @@ python3 "$CONTIKI_NG/tests/14-rpl-lite/run_paper_matrix.py" --help
 python3 "$CONTIKI_NG/tests/14-rpl-lite/extract_metric_csv.py" --help
 ```
 
-This repository does not ship the full result directories. Large experiment outputs should be published separately as release assets or in a companion artifact repository.
+This repository does not ship the full raw result directories. Instead, it includes processed summary data sufficient to trace the reported tables and main comparisons. Large experiment outputs can be published separately as release assets or in a companion artifact repository.
 
 ## License
 
