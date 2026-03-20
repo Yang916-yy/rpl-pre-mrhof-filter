@@ -1,0 +1,14 @@
+# Ignore local outputs
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.aux
+*.out
+*.abs
+*.pdf
+paper-results*/
+results*/
+.tmp/
+.DS_Store
+Thumbs.db

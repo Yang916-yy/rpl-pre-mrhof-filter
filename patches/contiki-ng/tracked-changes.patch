@@ -1,0 +1,866 @@
+﻿diff --git a/os/net/routing/rpl-classic/rpl-dag.c b/os/net/routing/rpl-classic/rpl-dag.c
+index 26d9d49..5455a71 100644
+--- a/os/net/routing/rpl-classic/rpl-dag.c
++++ b/os/net/routing/rpl-classic/rpl-dag.c
+@@ -42,6 +42,7 @@
+ 
+ #include "contiki.h"
+ #include "net/link-stats.h"
++#include "net/routing/rpl-classic/rpl-gate.h"
+ #include "net/routing/rpl-classic/rpl.h"
+ #include "net/routing/rpl-classic/rpl-private.h"
+ #include "net/routing/rpl-classic/rpl-dag-root.h"
+@@ -140,6 +141,7 @@ void
+ rpl_dag_init(void)
+ {
+   nbr_table_register(rpl_parents, (nbr_table_callback *)nbr_callback);
++  rpl_gate_init();
+ }
+ /*---------------------------------------------------------------------------*/
+ rpl_parent_t *
+@@ -259,6 +261,7 @@ rpl_set_preferred_parent(rpl_dag_t *dag, rpl_parent_t *p)
+ #ifdef RPL_CALLBACK_PARENT_SWITCH
+   RPL_CALLBACK_PARENT_SWITCH(dag->preferred_parent, p);
+ #endif /* RPL_CALLBACK_PARENT_SWITCH */
++  rpl_gate_note_parent_switch(dag->preferred_parent, p);
+ 
+   /* Always keep the preferred parent locked, so it remains in the
+    * neighbor table. */
+@@ -880,43 +883,85 @@ best_parent(rpl_dag_t *dag, int fresh_only)
+ {
+   rpl_parent_t *p;
+   rpl_of_t *of;
+-  rpl_parent_t *best = NULL;
++  rpl_gate_filter_mode_t modes[] = {
++    RPL_GATE_FILTER_USABLE,
++    RPL_GATE_FILTER_MID_BAND,
++    RPL_GATE_FILTER_RECOVERY
++  };
++  uint8_t mode_index;
+ 
+   if(dag == NULL || dag->instance == NULL || dag->instance->of == NULL) {
+     return NULL;
+   }
+ 
+   of = dag->instance->of;
+-  /* Search for the best parent according to the OF */
+-  for(p = nbr_table_head(rpl_parents); p != NULL; p = nbr_table_next(rpl_parents, p)) {
+ 
+-    /* Exclude parents that are from other DAGs or are announcing an
+-       infinite rank. */
++#if RPL_WITH_EDGE_GATE
++  rpl_gate_begin_round();
++  for(p = nbr_table_head(rpl_parents); p != NULL; p = nbr_table_next(rpl_parents, p)) {
+     if(p->dag != dag || p->rank == RPL_INFINITE_RANK ||
+        p->rank < ROOT_RANK(dag->instance)) {
+-      if(p->rank < ROOT_RANK(dag->instance)) {
+-        LOG_WARN("Parent has invalid rank\n");
+-      }
+       continue;
+     }
+ 
+     if(fresh_only && !rpl_parent_is_fresh(p)) {
+-      /* Filter out non-fresh parents if fresh_only is set. */
+       continue;
+     }
+ 
+ #if UIP_ND6_SEND_NS
+-    /* Exclude links to a neighbor that is not reachable at a NUD level. */
+     if(rpl_get_nbr(p) == NULL) {
+       continue;
+     }
+ #endif /* UIP_ND6_SEND_NS */
+ 
+-    /* Now we have an acceptable parent, check if it is the new best. */
+-    best = of->best_parent(best, p);
++    rpl_gate_observe_candidate(p);
+   }
++  rpl_gate_finalize_round();
++#endif /* RPL_WITH_EDGE_GATE */
++
++  for(mode_index = 0; mode_index < sizeof(modes) / sizeof(modes[0]); mode_index++) {
++    rpl_parent_t *best = NULL;
++
++    for(p = nbr_table_head(rpl_parents); p != NULL; p = nbr_table_next(rpl_parents, p)) {
++
++      if(p->dag != dag || p->rank == RPL_INFINITE_RANK ||
++         p->rank < ROOT_RANK(dag->instance)) {
++        if(p->rank < ROOT_RANK(dag->instance)) {
++          LOG_WARN("Parent has invalid rank\n");
++        }
++        continue;
++      }
++
++      if(fresh_only && !rpl_parent_is_fresh(p)) {
++        continue;
++      }
+ 
+-  return best;
++#if UIP_ND6_SEND_NS
++      if(rpl_get_nbr(p) == NULL) {
++        continue;
++      }
++#endif /* UIP_ND6_SEND_NS */
++
++#if RPL_WITH_EDGE_GATE
++      if(!rpl_gate_parent_allowed(p, modes[mode_index])) {
++        continue;
++      }
++#endif /* RPL_WITH_EDGE_GATE */
++
++      if(best != NULL) {
++        rpl_gate_note_parent_comparison();
++      }
++      best = of->best_parent(best, p);
++    }
++
++    if(best != NULL) {
++      rpl_gate_note_selection_result(1, modes[mode_index]);
++      return best;
++    }
++  }
++
++  rpl_gate_note_selection_result(0, RPL_GATE_FILTER_NONE);
++  return NULL;
+ }
+ /*---------------------------------------------------------------------------*/
+ rpl_parent_t *
+diff --git a/os/net/routing/rpl-classic/rpl-icmp6.c b/os/net/routing/rpl-classic/rpl-icmp6.c
+index 27742ca..1f248ec 100644
+--- a/os/net/routing/rpl-classic/rpl-icmp6.c
++++ b/os/net/routing/rpl-classic/rpl-icmp6.c
+@@ -276,6 +276,7 @@ dis_output(uip_ipaddr_t *addr)
+   LOG_INFO_6ADDR(addr);
+   LOG_INFO_("\n");
+ 
++  LOG_INFO("RPLTX:DIS\n");
+   uip_icmp6_send(addr, ICMP6_RPL, RPL_CODE_DIS, 2);
+ }
+ /*---------------------------------------------------------------------------*/
+@@ -641,6 +642,7 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
+   LOG_INFO("Sending unicast-DIO with rank %u to ", (unsigned)dag->rank);
+   LOG_INFO_6ADDR(uc_addr);
+   LOG_INFO_("\n");
++  LOG_INFO("RPLTX:DIO\n");
+   uip_icmp6_send(uc_addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+ #else /* RPL_LEAF_ONLY */
+   /* Unicast requests get unicast replies! */
+@@ -648,12 +650,14 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
+     LOG_INFO("Sending a multicast-DIO with rank %u\n",
+              (unsigned)instance->current_dag->rank);
+     uip_create_linklocal_rplnodes_mcast(&addr);
++    LOG_INFO("RPLTX:DIO\n");
+     uip_icmp6_send(&addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+   } else {
+     LOG_INFO("Sending unicast-DIO with rank %u to ",
+              (unsigned)instance->current_dag->rank);
+     LOG_INFO_6ADDR(uc_addr);
+     LOG_INFO_("\n");
++    LOG_INFO("RPLTX:DIO\n");
+     uip_icmp6_send(uc_addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+   }
+ #endif /* RPL_LEAF_ONLY */
+@@ -1380,6 +1384,7 @@ dao_output_target_seq(rpl_parent_t *parent, uip_ipaddr_t *prefix,
+   LOG_INFO_("\n");
+ 
+   if(dest_ipaddr != NULL) {
++    LOG_INFO("RPLTX:DAO\n");
+     uip_icmp6_send(dest_ipaddr, ICMP6_RPL, RPL_CODE_DAO, pos);
+   }
+ }
+diff --git a/os/net/routing/rpl-lite/rpl-icmp6.c b/os/net/routing/rpl-lite/rpl-icmp6.c
+index 1601812..8a16141 100644
+--- a/os/net/routing/rpl-lite/rpl-icmp6.c
++++ b/os/net/routing/rpl-lite/rpl-icmp6.c
+@@ -166,6 +166,7 @@ rpl_icmp6_dis_output(uip_ipaddr_t *addr)
+   LOG_INFO_6ADDR(addr);
+   LOG_INFO_("\n");
+ 
++  LOG_INFO("RPLTX:DIS\n");
+   uip_icmp6_send(addr, ICMP6_RPL, RPL_CODE_DIS, 2);
+ }
+ /*---------------------------------------------------------------------------*/
+@@ -467,6 +468,7 @@ rpl_icmp6_dio_output(uip_ipaddr_t *uc_addr)
+   LOG_INFO_6ADDR(addr);
+   LOG_INFO_("\n");
+ 
++  LOG_INFO("RPLTX:DIO\n");
+   uip_icmp6_send(addr, ICMP6_RPL, RPL_CODE_DIO, pos);
+ }
+ /*---------------------------------------------------------------------------*/
+@@ -666,6 +668,7 @@ rpl_icmp6_dao_output(uint8_t lifetime)
+   LOG_INFO_("\n");
+ 
+   /* Send DAO to root (IPv6 address is DAG ID) */
++  LOG_INFO("RPLTX:DAO\n");
+   uip_icmp6_send(&curr_instance.dag.dag_id, ICMP6_RPL, RPL_CODE_DAO, pos);
+ }
+ #if RPL_WITH_DAO_ACK
+diff --git a/os/net/routing/rpl-lite/rpl-mrhof.c b/os/net/routing/rpl-lite/rpl-mrhof.c
+index 79c06d4..a78701f 100644
+--- a/os/net/routing/rpl-lite/rpl-mrhof.c
++++ b/os/net/routing/rpl-lite/rpl-mrhof.c
+@@ -48,6 +48,7 @@
+ #include "net/routing/rpl-lite/rpl.h"
+ #include "net/nbr-table.h"
+ #include "net/link-stats.h"
++#include <string.h>
+ 
+ /* Log configuration */
+ #include "sys/log.h"
+@@ -103,10 +104,460 @@
+  * this neighbor regardless of RANK_THRESHOLD. */
+ #define TIME_THRESHOLD (10 * 60 * CLOCK_SECOND)
+ 
++static int nbr_is_acceptable_parent(rpl_nbr_t *nbr);
++
++#ifdef RPL_EXPERIMENTAL_MRHOF
++#define RPL_EXPERIMENTAL_MRHOF_ENABLED RPL_EXPERIMENTAL_MRHOF
++#else
++#define RPL_EXPERIMENTAL_MRHOF_ENABLED 0
++#endif
++
++#if RPL_EXPERIMENTAL_MRHOF_ENABLED
++#define EXP_K_ACTIVE 6
++#define EXP_S_STANDBY 12
++#define EXP_T_DEAD (30 * CLOCK_SECOND)
++#define EXP_MARGIN_RANK 1
++#define EXP_ALPHA_TREND 6553
++#define EXP_BETA_HF 13107
++#define EXP_ETX_STEP MAX(1, LINK_STATS_ETX_DIVISOR / 20)
++/* Align hysteresis semantics with vanilla MRHOF:
++ * - rank hysteresis: RANK_THRESHOLD (default 1.5 ETX) */
++#define EXP_HYST_STEPS ((RANK_THRESHOLD + EXP_ETX_STEP - 1) / EXP_ETX_STEP)
++/* - time hysteresis: TIME_THRESHOLD (default 10 minutes) */
++#define EXP_TIME_THRESHOLD TIME_THRESHOLD
++#define EXP_T_GOOD_MAX (2 * LINK_STATS_ETX_DIVISOR)
++#define EXP_H_GOOD_MAX (LINK_STATS_ETX_DIVISOR / 4)
++
++typedef struct {
++  rpl_nbr_t *nbr;
++  uint16_t trend_etx;
++  uint16_t hf;
++  uint16_t path_steps;
++  clock_time_t last_seen;
++  uint8_t used;
++  uint8_t etx_inited;
++  uint8_t seen;
++  uint8_t feasible;
++} exp_nbr_state_t;
++
++typedef struct {
++  rpl_nbr_t *nbr;
++  uint16_t metric_steps;
++  uint8_t used;
++} exp_entry_t;
++
++static exp_nbr_state_t exp_states[NBR_TABLE_MAX_NEIGHBORS];
++static exp_entry_t exp_active[EXP_K_ACTIVE];
++static exp_entry_t exp_standby[EXP_S_STANDBY];
++static rpl_nbr_t *exp_pending_parent;
++static clock_time_t exp_pending_since;
++static rpl_nbr_t *exp_cached_parent;
++static uint8_t exp_cache_valid;
++
++static uint16_t
++exp_abs_diff_u16(uint16_t a, uint16_t b)
++{
++  return a >= b ? a - b : b - a;
++}
++
++static uint16_t
++exp_saturating_add_u16(uint16_t a, uint16_t b)
++{
++  uint32_t sum = (uint32_t)a + b;
++  return sum > 0xffff ? 0xffff : (uint16_t)sum;
++}
++
++static uint16_t
++exp_ewma_q0_16(uint16_t prev, uint16_t x, uint16_t a_q0_16)
++{
++  uint32_t a = a_q0_16;
++  uint32_t one_minus = 65535 - a;
++  uint32_t y = ((one_minus * prev) + (a * x) + 32768) >> 16;
++  return (uint16_t)y;
++}
++
++static void
++exp_entry_clear(exp_entry_t *e)
++{
++  e->nbr = NULL;
++  e->metric_steps = 0xffff;
++  e->used = 0;
++}
++
++static void
++exp_clear_entries(exp_entry_t *list, uint16_t len)
++{
++  uint16_t i;
++  for(i = 0; i < len; i++) {
++    exp_entry_clear(&list[i]);
++  }
++}
++
++static void
++exp_reset_state(void)
++{
++  memset(exp_states, 0, sizeof(exp_states));
++  exp_clear_entries(exp_active, EXP_K_ACTIVE);
++  exp_clear_entries(exp_standby, EXP_S_STANDBY);
++  exp_pending_parent = NULL;
++  exp_pending_since = 0;
++  exp_cached_parent = NULL;
++  exp_cache_valid = 0;
++}
++
++static exp_nbr_state_t *
++exp_find_state(rpl_nbr_t *nbr)
++{
++  uint16_t i;
++  for(i = 0; i < NBR_TABLE_MAX_NEIGHBORS; i++) {
++    if(exp_states[i].used && exp_states[i].nbr == nbr) {
++      return &exp_states[i];
++    }
++  }
++  return NULL;
++}
++
++static exp_nbr_state_t *
++exp_find_or_alloc_state(rpl_nbr_t *nbr)
++{
++  uint16_t i;
++  exp_nbr_state_t *st = exp_find_state(nbr);
++  if(st != NULL) {
++    return st;
++  }
++
++  for(i = 0; i < NBR_TABLE_MAX_NEIGHBORS; i++) {
++    if(!exp_states[i].used) {
++      exp_states[i].used = 1;
++      exp_states[i].nbr = nbr;
++      exp_states[i].trend_etx = LINK_STATS_ETX_DIVISOR;
++      exp_states[i].hf = 0;
++      exp_states[i].path_steps = 0xffff;
++      exp_states[i].last_seen = 0;
++      exp_states[i].etx_inited = 0;
++      exp_states[i].seen = 0;
++      exp_states[i].feasible = 0;
++      return &exp_states[i];
++    }
++  }
++  return NULL;
++}
++
++static void
++exp_remove_from_entries(exp_entry_t *list, uint16_t len, rpl_nbr_t *nbr)
++{
++  uint16_t i;
++  for(i = 0; i < len; i++) {
++    if(list[i].used && list[i].nbr == nbr) {
++      exp_entry_clear(&list[i]);
++    }
++  }
++}
++
++static uint8_t
++exp_upsert_bounded(exp_entry_t *list, uint16_t len, rpl_nbr_t *nbr, uint16_t metric)
++{
++  uint16_t i;
++  uint16_t worst_i = 0;
++  uint16_t worst_m = 0;
++
++  for(i = 0; i < len; i++) {
++    if(list[i].used && list[i].nbr == nbr) {
++      list[i].metric_steps = metric;
++      return 1;
++    }
++  }
++
++  for(i = 0; i < len; i++) {
++    if(!list[i].used) {
++      list[i].used = 1;
++      list[i].nbr = nbr;
++      list[i].metric_steps = metric;
++      return 1;
++    }
++  }
++
++  for(i = 0; i < len; i++) {
++    if(list[i].used && list[i].metric_steps >= worst_m) {
++      worst_m = list[i].metric_steps;
++      worst_i = i;
++    }
++  }
++
++  if(metric < worst_m) {
++    list[worst_i].used = 1;
++    list[worst_i].nbr = nbr;
++    list[worst_i].metric_steps = metric;
++    return 1;
++  }
++
++  return 0;
++}
++
++static uint16_t
++exp_link_steps_from_etx(uint16_t etx)
++{
++  return etx / EXP_ETX_STEP;
++}
++
++static uint16_t
++exp_metric_steps(exp_nbr_state_t *st)
++{
++  return exp_saturating_add_u16(st->path_steps, exp_link_steps_from_etx(st->trend_etx));
++}
++
++static uint8_t
++exp_hard_gate_ok(exp_nbr_state_t *st, clock_time_t now)
++{
++  uint32_t age;
++  uint32_t parent_rank;
++
++  if(st == NULL || !st->used || st->nbr == NULL) {
++    return 0;
++  }
++
++  if(st->last_seen != 0) {
++    age = (uint32_t)(now - st->last_seen);
++    if(age > EXP_T_DEAD) {
++      return 0;
++    }
++  }
++
++  parent_rank = (uint32_t)st->nbr->rank + EXP_MARGIN_RANK;
++  if(parent_rank >= curr_instance.dag.rank) {
++    return 0;
++  }
++
++  return nbr_is_acceptable_parent(st->nbr);
++}
++
++static uint8_t
++exp_good_gate_ok(exp_nbr_state_t *st)
++{
++  return st->trend_etx <= EXP_T_GOOD_MAX && st->hf <= EXP_H_GOOD_MAX;
++}
++
++static void
++exp_sync_neighbors(clock_time_t now)
++{
++  uint16_t i;
++  uint16_t rank_scale = MAX(curr_instance.min_hoprankinc, 1);
++  rpl_nbr_t *nbr;
++
++  for(i = 0; i < NBR_TABLE_MAX_NEIGHBORS; i++) {
++    if(exp_states[i].used) {
++      exp_states[i].seen = 0;
++      exp_states[i].feasible = 0;
++    }
++  }
++
++  for(nbr = nbr_table_head(rpl_neighbors); nbr != NULL; nbr = nbr_table_next(rpl_neighbors, nbr)) {
++    const struct link_stats *stats;
++    exp_nbr_state_t *st = exp_find_or_alloc_state(nbr);
++
++    if(st == NULL) {
++      continue;
++    }
++
++    st->nbr = nbr;
++    st->seen = 1;
++    st->path_steps = nbr->rank / rank_scale;
++
++    stats = rpl_neighbor_get_link_stats(nbr);
++    if(stats != NULL) {
++      st->last_seen = now;
++    }
++    if(stats != NULL && link_stats_is_fresh(stats)) {
++      uint16_t x = stats->etx;
++      if(!st->etx_inited) {
++        st->trend_etx = x;
++        st->hf = 0;
++        st->etx_inited = 1;
++      } else {
++        st->trend_etx = exp_ewma_q0_16(st->trend_etx, x, EXP_ALPHA_TREND);
++        st->hf = exp_ewma_q0_16(st->hf, exp_abs_diff_u16(x, st->trend_etx), EXP_BETA_HF);
++      }
++    }
++  }
++
++  for(i = 0; i < NBR_TABLE_MAX_NEIGHBORS; i++) {
++    if(exp_states[i].used && !exp_states[i].seen) {
++      exp_remove_from_entries(exp_active, EXP_K_ACTIVE, exp_states[i].nbr);
++      exp_remove_from_entries(exp_standby, EXP_S_STANDBY, exp_states[i].nbr);
++      if(exp_pending_parent == exp_states[i].nbr) {
++        exp_pending_parent = NULL;
++        exp_pending_since = 0;
++      }
++      if(exp_cached_parent == exp_states[i].nbr) {
++        exp_cached_parent = NULL;
++      }
++      memset(&exp_states[i], 0, sizeof(exp_states[i]));
++    }
++  }
++}
++
++static void
++exp_rebuild_membership(clock_time_t now)
++{
++  uint16_t i;
++
++  exp_clear_entries(exp_active, EXP_K_ACTIVE);
++  exp_clear_entries(exp_standby, EXP_S_STANDBY);
++
++  for(i = 0; i < NBR_TABLE_MAX_NEIGHBORS; i++) {
++    exp_nbr_state_t *st = &exp_states[i];
++    uint16_t metric;
++
++    if(!st->used) {
++      continue;
++    }
++
++    st->feasible = 0;
++    if(!exp_hard_gate_ok(st, now)) {
++      continue;
++    }
++
++    metric = exp_metric_steps(st);
++    if(exp_good_gate_ok(st)) {
++      uint8_t in_active = exp_upsert_bounded(exp_active, EXP_K_ACTIVE, st->nbr, metric);
++      uint8_t in_standby = 0;
++      if(!in_active) {
++        in_standby = exp_upsert_bounded(exp_standby, EXP_S_STANDBY, st->nbr, metric);
++      }
++      st->feasible = !(in_active || in_standby);
++    } else {
++      st->feasible = 1;
++    }
++  }
++}
++
++static uint8_t
++exp_choose_best_from_entries(exp_entry_t *list, uint16_t len, clock_time_t now, rpl_nbr_t **best_nbr, uint16_t *best_metric)
++{
++  uint16_t i;
++  uint8_t found = 0;
++
++  for(i = 0; i < len; i++) {
++    exp_nbr_state_t *st;
++    if(!list[i].used || list[i].nbr == NULL) {
++      continue;
++    }
++    st = exp_find_state(list[i].nbr);
++    if(!exp_hard_gate_ok(st, now)) {
++      continue;
++    }
++    if(!found || list[i].metric_steps < *best_metric) {
++      found = 1;
++      *best_nbr = list[i].nbr;
++      *best_metric = list[i].metric_steps;
++    }
++  }
++
++  return found;
++}
++
++static uint8_t
++exp_choose_best_from_feasible(clock_time_t now, rpl_nbr_t **best_nbr, uint16_t *best_metric)
++{
++  uint16_t i;
++  uint8_t found = 0;
++
++  for(i = 0; i < NBR_TABLE_MAX_NEIGHBORS; i++) {
++    exp_nbr_state_t *st = &exp_states[i];
++    uint16_t metric;
++    if(!st->used || !st->feasible) {
++      continue;
++    }
++    if(!exp_hard_gate_ok(st, now)) {
++      continue;
++    }
++    metric = exp_metric_steps(st);
++    if(!found || metric < *best_metric) {
++      found = 1;
++      *best_nbr = st->nbr;
++      *best_metric = metric;
++    }
++  }
++
++  return found;
++}
++
++static rpl_nbr_t *
++exp_select_parent(clock_time_t now)
++{
++  rpl_nbr_t *best_nbr = NULL;
++  uint16_t best_metric = 0xffff;
++  uint8_t found = 0;
++  rpl_nbr_t *cur = curr_instance.dag.preferred_parent;
++  uint16_t cur_metric = 0xffff;
++  uint8_t cur_usable = 0;
++
++  exp_sync_neighbors(now);
++  exp_rebuild_membership(now);
++
++  found = exp_choose_best_from_entries(exp_active, EXP_K_ACTIVE, now, &best_nbr, &best_metric);
++  if(!found) {
++    found = exp_choose_best_from_entries(exp_standby, EXP_S_STANDBY, now, &best_nbr, &best_metric);
++  }
++  if(!found) {
++    found = exp_choose_best_from_feasible(now, &best_nbr, &best_metric);
++  }
++
++  if(!found || best_nbr == NULL) {
++    exp_pending_parent = NULL;
++    exp_pending_since = 0;
++    return NULL;
++  }
++
++  if(cur != NULL) {
++    exp_nbr_state_t *cur_st = exp_find_state(cur);
++    if(exp_hard_gate_ok(cur_st, now)) {
++      cur_metric = exp_metric_steps(cur_st);
++      cur_usable = 1;
++    }
++  }
++
++  if(cur == NULL || !cur_usable) {
++    exp_pending_parent = NULL;
++    exp_pending_since = 0;
++    return best_nbr;
++  }
++
++  /* Keep vanilla MRHOF semantics:
++   * 1) immediate switch if gain exceeds rank hysteresis
++   * 2) otherwise, switch only if consistently better for TIME_THRESHOLD */
++  if(best_metric < cur_metric) {
++    if(exp_saturating_add_u16(best_metric, EXP_HYST_STEPS) < cur_metric) {
++      exp_pending_parent = NULL;
++      exp_pending_since = 0;
++      return best_nbr;
++    }
++
++    if(exp_pending_parent != best_nbr) {
++      exp_pending_parent = best_nbr;
++      exp_pending_since = now;
++    } else if(exp_pending_since != 0
++              && (uint32_t)(now - exp_pending_since) > EXP_TIME_THRESHOLD) {
++      exp_pending_parent = NULL;
++      exp_pending_since = 0;
++      return best_nbr;
++    }
++  } else {
++    exp_pending_parent = NULL;
++    exp_pending_since = 0;
++  }
++
++  return cur;
++}
++#endif /* RPL_EXPERIMENTAL_MRHOF_ENABLED */
++
+ /*---------------------------------------------------------------------------*/
+ static void
+ reset(void)
+ {
++#if RPL_EXPERIMENTAL_MRHOF_ENABLED
++  exp_reset_state();
++#endif
+   LOG_INFO("reset MRHOF\n");
+ }
+ /*---------------------------------------------------------------------------*/
+@@ -191,6 +642,7 @@ nbr_is_acceptable_parent(rpl_nbr_t *nbr)
+   return nbr_has_usable_link(nbr) && path_cost <= MAX_PATH_COST;
+ }
+ /*---------------------------------------------------------------------------*/
++#if !RPL_EXPERIMENTAL_MRHOF_ENABLED
+ static int
+ within_hysteresis(rpl_nbr_t *nbr)
+ {
+@@ -205,10 +657,19 @@ within_hysteresis(rpl_nbr_t *nbr)
+   hystereses, return 1 here iff the neighbor is within both hystereses. */
+   return within_rank_hysteresis && within_time_hysteresis;
+ }
++#endif
+ /*---------------------------------------------------------------------------*/
+ static rpl_nbr_t *
+ best_parent(rpl_nbr_t *nbr1, rpl_nbr_t *nbr2)
+ {
++#if RPL_EXPERIMENTAL_MRHOF_ENABLED
++  (void)nbr2;
++  if(nbr1 == NULL || !exp_cache_valid) {
++    exp_cached_parent = exp_select_parent(clock_time());
++    exp_cache_valid = 1;
++  }
++  return exp_cached_parent;
++#else
+   int nbr1_is_acceptable;
+   int nbr2_is_acceptable;
+ 
+@@ -233,6 +694,7 @@ best_parent(rpl_nbr_t *nbr1, rpl_nbr_t *nbr2)
+   }
+ 
+   return nbr_path_cost(nbr1) < nbr_path_cost(nbr2) ? nbr1 : nbr2;
++#endif
+ }
+ /*---------------------------------------------------------------------------*/
+ #if !RPL_WITH_MC
+diff --git a/os/net/routing/rpl-lite/rpl-neighbor.c b/os/net/routing/rpl-lite/rpl-neighbor.c
+index a519f68..6f505e0 100644
+--- a/os/net/routing/rpl-lite/rpl-neighbor.c
++++ b/os/net/routing/rpl-lite/rpl-neighbor.c
+@@ -44,6 +44,7 @@
+ 
+ #include "contiki.h"
+ #include "net/routing/rpl-lite/rpl.h"
++#include "net/routing/rpl-lite/rpl-gate.h"
+ #include "net/link-stats.h"
+ #include "net/nbr-table.h"
+ #include "net/ipv6/uiplib.h"
+@@ -59,6 +60,7 @@ void RPL_CALLBACK_PARENT_SWITCH(rpl_nbr_t *old, rpl_nbr_t *new);
+ #endif /* RPL_CALLBACK_PARENT_SWITCH */
+ 
+ static rpl_nbr_t * best_parent(int fresh_only);
++static int parent_passes_base_filters(rpl_nbr_t *nbr, int fresh_only);
+ 
+ /*---------------------------------------------------------------------------*/
+ /* Per-neighbor RPL information */
+@@ -287,6 +289,7 @@ rpl_neighbor_set_preferred_parent(rpl_nbr_t *nbr)
+ #ifdef RPL_CALLBACK_PARENT_SWITCH
+     RPL_CALLBACK_PARENT_SWITCH(curr_instance.dag.preferred_parent, nbr);
+ #endif /* RPL_CALLBACK_PARENT_SWITCH */
++    rpl_gate_note_parent_switch(curr_instance.dag.preferred_parent, nbr);
+ 
+     /* Always keep the preferred parent locked, so it remains in the
+      * neighbor table. */
+@@ -335,42 +338,82 @@ rpl_neighbor_get_from_ipaddr(uip_ipaddr_t *addr)
+   return nbr_table_get_from_lladdr(rpl_neighbors, (linkaddr_t *)lladdr);
+ }
+ /*---------------------------------------------------------------------------*/
++static int
++parent_passes_base_filters(rpl_nbr_t *nbr, int fresh_only)
++{
++  if(!acceptable_rank(rpl_neighbor_rank_via_nbr(nbr))
++    || !curr_instance.of->nbr_is_acceptable_parent(nbr)) {
++    return 0;
++  }
++
++  if(fresh_only && !rpl_neighbor_is_fresh(nbr)) {
++    return 0;
++  }
++
++#if UIP_ND6_SEND_NS
++  if(rpl_get_ds6_nbr(nbr) == NULL) {
++    return 0;
++  }
++#endif /* UIP_ND6_SEND_NS */
++
++  return 1;
++}
++/*---------------------------------------------------------------------------*/
+ static rpl_nbr_t *
+ best_parent(int fresh_only)
+ {
+   rpl_nbr_t *nbr;
+-  rpl_nbr_t *best = NULL;
++  rpl_of_t *of;
++  rpl_gate_filter_mode_t modes[] = {
++    RPL_GATE_FILTER_USABLE,
++    RPL_GATE_FILTER_MID_BAND,
++    RPL_GATE_FILTER_RECOVERY
++  };
++  uint8_t mode_index;
+ 
+   if(curr_instance.used == 0) {
+     return NULL;
+   }
+ 
+-  /* Search for the best parent according to the OF */
+-  for(nbr = nbr_table_head(rpl_neighbors); nbr != NULL; nbr = nbr_table_next(rpl_neighbors, nbr)) {
++  of = curr_instance.of;
+ 
+-    if(!acceptable_rank(rpl_neighbor_rank_via_nbr(nbr))
+-      || !curr_instance.of->nbr_is_acceptable_parent(nbr)) {
+-      /* Exclude neighbors with a rank that is not acceptable */
+-      continue;
++#if RPL_WITH_EDGE_GATE
++  rpl_gate_begin_round();
++  for(nbr = nbr_table_head(rpl_neighbors); nbr != NULL; nbr = nbr_table_next(rpl_neighbors, nbr)) {
++    if(parent_passes_base_filters(nbr, fresh_only)) {
++      rpl_gate_observe_candidate(nbr);
+     }
++  }
++  rpl_gate_finalize_round();
++#endif /* RPL_WITH_EDGE_GATE */
+ 
+-    if(fresh_only && !rpl_neighbor_is_fresh(nbr)) {
+-      /* Filter out non-fresh nerighbors if fresh_only is set */
+-      continue;
+-    }
++  for(mode_index = 0; mode_index < sizeof(modes) / sizeof(modes[0]); mode_index++) {
++    rpl_nbr_t *best = NULL;
+ 
+-#if UIP_ND6_SEND_NS
+-    /* Exclude links to a neighbor that is not reachable at a NUD level */
+-    if(rpl_get_ds6_nbr(nbr) == NULL) {
+-      continue;
++    for(nbr = nbr_table_head(rpl_neighbors); nbr != NULL; nbr = nbr_table_next(rpl_neighbors, nbr)) {
++      if(!parent_passes_base_filters(nbr, fresh_only)) {
++        continue;
++      }
++#if RPL_WITH_EDGE_GATE
++      if(!rpl_gate_parent_allowed(nbr, modes[mode_index])) {
++        continue;
++      }
++#endif /* RPL_WITH_EDGE_GATE */
++
++      if(best != NULL) {
++        rpl_gate_note_parent_comparison();
++      }
++      best = of->best_parent(best, nbr);
+     }
+-#endif /* UIP_ND6_SEND_NS */
+ 
+-    /* Now we have an acceptable parent, check if it is the new best */
+-    best = curr_instance.of->best_parent(best, nbr);
++    if(best != NULL) {
++      rpl_gate_note_selection_result(1, modes[mode_index]);
++      return best;
++    }
+   }
+ 
+-  return best;
++  rpl_gate_note_selection_result(0, RPL_GATE_FILTER_NONE);
++  return NULL;
+ }
+ /*---------------------------------------------------------------------------*/
+ rpl_nbr_t *
+@@ -441,5 +484,6 @@ void
+ rpl_neighbor_init(void)
+ {
+   nbr_table_register(rpl_neighbors, (nbr_table_callback *)remove_neighbor);
++  rpl_gate_init();
+ }
+ /** @} */
+diff --git a/tests/14-rpl-lite/code/project-conf.h b/tests/14-rpl-lite/code/project-conf.h
+index 439cdef..7a19a99 100644
+--- a/tests/14-rpl-lite/code/project-conf.h
++++ b/tests/14-rpl-lite/code/project-conf.h
+@@ -28,3 +28,6 @@
+  */
+ #define TCPIP_CONF_ANNOTATE_TRANSMISSIONS 1
+ #define LOG_CONF_LEVEL_RPL LOG_LEVEL_INFO
++#define RPL_CONF_WITH_EDGE_GATE 1
++#define RPL_CONF_EDGE_GATE_ENABLE_HARD_PRUNE 1
++#define RPL_CONF_EDGE_GATE_ENABLE_SOFT_GATING 1
+diff --git a/tests/15-rpl-classic/code/project-conf.h b/tests/15-rpl-classic/code/project-conf.h
+index 439cdef..7a19a99 100644
+--- a/tests/15-rpl-classic/code/project-conf.h
++++ b/tests/15-rpl-classic/code/project-conf.h
+@@ -28,3 +28,6 @@
+  */
+ #define TCPIP_CONF_ANNOTATE_TRANSMISSIONS 1
+ #define LOG_CONF_LEVEL_RPL LOG_LEVEL_INFO
++#define RPL_CONF_WITH_EDGE_GATE 1
++#define RPL_CONF_EDGE_GATE_ENABLE_HARD_PRUNE 1
++#define RPL_CONF_EDGE_GATE_ENABLE_SOFT_GATING 1

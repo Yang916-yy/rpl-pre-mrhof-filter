@@ -1,0 +1,16 @@
+﻿cff-version: 1.2.0
+message: "If you use this software, please cite the associated paper."
+title: "Pre-MRHOF Bad-Edge Filtering with Global Priors for RPL"
+authors:
+  - family-names: "Wang"
+    given-names: "Zhaoyang"
+  - family-names: "Zhou"
+    given-names: "Xinli"
+  - family-names: "Li"
+    given-names: "Jie"
+  - family-names: "Liang"
+    given-names: "Huanzhuo"
+abstract: >-
+  Patch-style release scaffold for the pre-MRHOF bad-edge filtering mechanism,
+  experiment helpers, and lightweight reproduction assets built on top of Contiki-NG.
+license: "BSD-3-Clause"
