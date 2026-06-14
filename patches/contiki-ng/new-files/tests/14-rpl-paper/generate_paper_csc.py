@@ -389,7 +389,7 @@ def patch_local_failure_script(script_text: str, failed_nodes) -> str:
         '            recoveryHits = 0;\n'
         '            recoveryArmed = 1;\n'
         '         } else {\n'
-        '            log.log("did not add sink as it was already there\\n");      \n'
+        '            log.log("did not add sink as it was already there\\n");\n'
         '         }\n'
         '    } else if(msg.startsWith("Sending")) {'
     )
@@ -401,7 +401,7 @@ def patch_local_failure_script(script_text: str, failed_nodes) -> str:
         '            sim.addMote(m);\n'
         '            log.log("added sink\\n");\n'
         '         } else {\n'
-        '            log.log("did not add sink as it was already there\\n");      \n'
+        '            log.log("did not add sink as it was already there\\n");\n'
         '         }\n'
         '    } else if(msg.equals("local_fail_on")) {\n'
         '        applyLocalFailure();\n'
