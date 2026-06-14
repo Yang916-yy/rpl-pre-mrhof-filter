@@ -1,6 +1,6 @@
 ﻿cff-version: 1.2.0
 message: "If you use this software, please cite the associated paper."
-title: "Pre-MRHOF Bad-Edge Filtering with Global Priors for RPL"
+title: "Structural Candidate-Space Compression for Efficient RPL Parent Selection"
 authors:
   - family-names: "Wang"
     given-names: "Zhaoyang"
@@ -11,6 +11,6 @@ authors:
   - family-names: "Liang"
     given-names: "Huanzhuo"
 abstract: >-
-  Patch-style release scaffold for the pre-MRHOF bad-edge filtering mechanism,
-  experiment helpers, and lightweight reproduction assets built on top of Contiki-NG.
+  Contiki-NG implementation, experiment runners, released per-seed metrics,
+  and reproduction assets for structural RPL parent pre-selection.
 license: "BSD-3-Clause"

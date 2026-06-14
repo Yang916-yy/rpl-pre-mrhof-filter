@@ -3,6 +3,7 @@ import argparse
 import heapq
 import math
 import os
+import random
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -25,6 +26,9 @@ def parse_args():
     parser.add_argument("--hop-penalty-q8", type=int, default=32)
     parser.add_argument("--relu-threshold-q8", type=int, default=-1)
     parser.add_argument("--relu-alpha-q8", type=int, default=256)
+    parser.add_argument("--prior-mode", choices=("geometry", "hop"), default="geometry")
+    parser.add_argument("--coordinate-noise-pct", type=float, default=0.0)
+    parser.add_argument("--noise-seed", type=int, default=0)
     return parser.parse_args()
 
 
@@ -86,7 +90,27 @@ def parse_simulation(csc_path: Path):
     return tx_range, root_id, nodes, dgrm_edges
 
 
-def build_graph(nodes, tx_range, hop_penalty_q8, args_relu_threshold_q8, args_relu_alpha_q8, dgrm_edges):
+def perturb_coordinates(nodes, tx_range, noise_pct, noise_seed):
+    if noise_pct <= 0:
+        return dict(nodes)
+
+    rng = random.Random(noise_seed)
+    max_error = tx_range * noise_pct / 100.0
+    perturbed = {}
+    for node_id in sorted(nodes):
+        angle = rng.uniform(0.0, 2.0 * math.pi)
+        radius = max_error * math.sqrt(rng.random())
+        x, y = nodes[node_id]
+        perturbed[node_id] = (
+            x + radius * math.cos(angle),
+            y + radius * math.sin(angle),
+        )
+    return perturbed
+
+
+def build_graph(nodes, prior_nodes, tx_range, hop_penalty_q8,
+                args_relu_threshold_q8, args_relu_alpha_q8, dgrm_edges,
+                prior_mode):
     ids = sorted(nodes)
     max_id = ids[-1] if ids else 0
     cost = [[0] * (max_id + 1) for _ in range(max_id + 1)]
@@ -98,21 +122,21 @@ def build_graph(nodes, tx_range, hop_penalty_q8, args_relu_threshold_q8, args_re
     edge_set = set(dgrm_edges) if dgrm_edges else None
 
     for src in ids:
-        x1, y1 = nodes[src]
         for dst in ids:
             if src == dst:
                 continue
             if edge_set is not None and (src, dst) not in edge_set:
                 continue
-            x2, y2 = nodes[dst]
-            dist = math.hypot(x2 - x1, y2 - y1)
-            if edge_set is not None or dist <= tx_range + 1e-9:
-                geom_q8 = int(round((dist / tx_range) * 256.0))
+            px1, py1 = prior_nodes[src]
+            px2, py2 = prior_nodes[dst]
+            prior_dist = math.hypot(px2 - px1, py2 - py1)
+            if edge_set is not None or prior_dist <= tx_range + 1e-9:
+                geom_q8 = int(round((prior_dist / tx_range) * 256.0))
                 relu_extra_q8 = 0
                 if args_relu_threshold_q8 >= 0 and geom_q8 > args_relu_threshold_q8:
                     relu_part_q8 = geom_q8 - args_relu_threshold_q8
                     relu_extra_q8 = int(round((relu_part_q8 * args_relu_alpha_q8) / 256.0))
-                weight_q8 = geom_q8 + hop_penalty_q8 + relu_extra_q8
+                weight_q8 = 256 if prior_mode == "hop" else geom_q8 + hop_penalty_q8 + relu_extra_q8
                 cost[src][dst] = weight_q8
                 adj[src].append((dst, weight_q8))
 
@@ -178,7 +202,17 @@ def emit_header(output, root_id, max_id, tx_range_q8, hop_penalty_q8, dist, cost
 def main():
     args = parse_args()
     tx_range, root_id, nodes, dgrm_edges = parse_simulation(args.csc)
-    max_id, cost, adj = build_graph(nodes, tx_range, args.hop_penalty_q8, args.relu_threshold_q8, args.relu_alpha_q8, dgrm_edges)
+    prior_nodes = perturb_coordinates(nodes, tx_range, args.coordinate_noise_pct, args.noise_seed)
+    max_id, cost, adj = build_graph(
+        nodes,
+        prior_nodes,
+        tx_range,
+        args.hop_penalty_q8,
+        args.relu_threshold_q8,
+        args.relu_alpha_q8,
+        dgrm_edges,
+        args.prior_mode,
+    )
     dist = dijkstra(root_id, sorted(nodes), adj)
     emit_header(args.output, root_id, max_id, int(round(tx_range * 256.0)), args.hop_penalty_q8, dist, cost)
 

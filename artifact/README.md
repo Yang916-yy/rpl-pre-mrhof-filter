@@ -1,14 +1,28 @@
-﻿Artifact contents in this repository
+# Artifact Contents
 
-This directory contains lightweight reproduction assets and processed result summaries that support the manuscript.
+This directory contains the analysis scripts and processed summaries that
+support the manuscript.
 
-Included categories
+## Direct table reproduction
+
+Run from the repository root:
+
+```bash
+python3 artifact/reproduce_paper_tables.py
+```
+
+The script reads `data/metrics/`, verifies the principal numerical claims,
+and writes `artifact/reproduced_paper_tables.md`.
+
+## Included
+
 - processed summary tables used in the paper and appendix
-- compact CSV summaries for parameter sensitivity and footprint overhead
+- compact CSV summaries for sensitivity and footprint overhead
 - figure-generation and footprint-measurement helpers
-- root-loss mechanism notes and other compact analytical summaries
+- prior-robustness and Squared-ETX analysis scripts
 
-Not included
-- full raw Contiki-NG result directories
-- temporary logs and local retry wrappers
+## Not included
+
+- verbose Cooja logs
+- local retry wrappers and build products
 - paper submission sources and PDFs

@@ -17,6 +17,9 @@
 - Regenerate priors with `tests/14-rpl-lite/generate_rpl_gate_prior.py`.
 - Run at least one small matrix successfully.
 - Regenerate one small metric CSV successfully.
+- Run `python3 artifact/reproduce_paper_tables.py`.
+- Confirm `data/metrics/` contains no machine-local paths.
+- Confirm the GitHub reproducibility workflow passes.
 
 ## Optional but useful
 

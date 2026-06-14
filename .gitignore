@@ -10,5 +10,6 @@ __pycache__/
 paper-results*/
 results*/
 .tmp/
+patches/contiki-ng/new-files/tests/14-rpl-paper/generated/
 .DS_Store
 Thumbs.db

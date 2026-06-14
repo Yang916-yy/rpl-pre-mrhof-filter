@@ -13,7 +13,9 @@ Keep these files as the final result set:
 - `generate_paper_figures.py`: figure generator
 - `figures/`: final PDFs used for the paper
 
-Raw experiment CSVs remain in the Contiki-NG workspace under WSL and are not duplicated here.
+Sanitized valid per-seed metrics for the principal paper tables are released
+under `data/metrics/`. Verbose raw logs and machine-local runner CSVs remain
+outside the repository.
 
 Superseded fragments were removed after consolidation:
 

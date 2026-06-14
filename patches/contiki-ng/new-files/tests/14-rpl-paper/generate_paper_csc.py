@@ -6,7 +6,12 @@ from pathlib import Path
 
 THIS_DIR = Path(__file__).resolve().parent
 CONTIKI_NG_ROOT = THIS_DIR.parents[1]
-SRC_DIR = Path(os.environ.get('PAPER_GENERATED_CORE_DIR', str(CONTIKI_NG_ROOT / 'tests' / '14-rpl-lite' / 'generated-core')))
+SRC_DIR = Path(
+    os.environ.get(
+        'PAPER_SCENARIO_TEMPLATE_DIR',
+        str(THIS_DIR / 'templates'),
+    )
+)
 OUT_ROOT = Path(os.environ.get('PAPER_14_PAPER_DIR', str(THIS_DIR)))
 OUT_DIR = OUT_ROOT / 'generated'
 
@@ -485,6 +490,9 @@ def generate_scene(scene_key: str, scale: int):
 
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    code_link = OUT_DIR / 'code'
+    if not code_link.exists() and not code_link.is_symlink():
+        code_link.symlink_to(Path('../../14-rpl-lite/code'), target_is_directory=True)
     for scene in SCENES:
         for scale in SCALES:
             print(generate_scene(scene, scale))

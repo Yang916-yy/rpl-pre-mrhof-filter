@@ -1,4 +1,4 @@
-﻿diff --git a/os/net/routing/rpl-classic/rpl-dag.c b/os/net/routing/rpl-classic/rpl-dag.c
+diff --git a/os/net/routing/rpl-classic/rpl-dag.c b/os/net/routing/rpl-classic/rpl-dag.c
 index 26d9d49..5455a71 100644
 --- a/os/net/routing/rpl-classic/rpl-dag.c
 +++ b/os/net/routing/rpl-classic/rpl-dag.c

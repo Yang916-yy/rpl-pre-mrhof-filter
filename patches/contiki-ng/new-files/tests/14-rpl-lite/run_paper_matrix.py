@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import csv
 import os
 import shutil
@@ -11,10 +12,14 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 GROUP_LABELS = {
     'baseline': 'Baseline',
+    'squared_etx': 'Squared-ETX',
+    'squared_etx_full': 'Squared-ETX+Full',
     'hard_only': 'Hard-Only',
     'soft_only': 'Soft-Only',
     'full': 'Full',
 }
+
+GATE_GROUPS = {'hard_only', 'soft_only', 'full', 'squared_etx_full'}
 
 SCENE_LABELS = {
     's1_stable': 'Stable',
@@ -26,6 +31,15 @@ SCENE_LABELS = {
 
 CONF_LINES = {
     'baseline': [],
+    'squared_etx': [
+        '#define RPL_MRHOF_CONF_SQUARED_ETX 1',
+    ],
+    'squared_etx_full': [
+        '#define RPL_MRHOF_CONF_SQUARED_ETX 1',
+        '#define RPL_CONF_WITH_EDGE_GATE 1',
+        '#define RPL_CONF_EDGE_GATE_ENABLE_HARD_PRUNE 1',
+        '#define RPL_CONF_EDGE_GATE_ENABLE_SOFT_GATING 1',
+    ],
     'hard_only': [
         '#define RPL_CONF_WITH_EDGE_GATE 1',
         '#define RPL_CONF_EDGE_GATE_ENABLE_HARD_PRUNE 1',
@@ -50,6 +64,7 @@ CSV_HEADER = [
 
 DEFINE_PREFIXES = [
     '#define RPL_EXPERIMENTAL_MRHOF',
+    '#define RPL_MRHOF_CONF_SQUARED_ETX',
     '#define RPL_CONF_WITH_EDGE_GATE',
     '#define RPL_CONF_EDGE_GATE_ENABLE_HARD_PRUNE',
     '#define RPL_CONF_EDGE_GATE_ENABLE_SOFT_GATING',
@@ -108,6 +123,9 @@ class Runner:
         self.hop_penalty_q8 = os.environ.get('PAPER_HOP_PENALTY_Q8', '32')
         self.relu_threshold_q8 = os.environ.get('PAPER_RELU_THRESHOLD_Q8', '-1')
         self.relu_alpha_q8 = os.environ.get('PAPER_RELU_ALPHA_Q8', '256')
+        self.prior_mode = os.environ.get('PAPER_PRIOR_MODE', 'geometry')
+        self.prior_coordinate_noise_pct = os.environ.get('PAPER_PRIOR_COORD_NOISE_PCT', '0')
+        self.prior_noise_seed = os.environ.get('PAPER_PRIOR_NOISE_SEED', 'case')
         self.require_gate_on = os.environ.get('PAPER_REQUIRE_GATE_ON', '1') != '0'
         self.expected_seeds = int(os.environ.get('PAPER_EXPECTED_SEEDS', '20'))
         self.groups = self._split_env('PAPER_GROUPS', 'baseline hard_only soft_only full')
@@ -211,7 +229,8 @@ class Runner:
         text = script_log.read_text(encoding='utf-8', errors='ignore')
         if 'TEST OK' not in text or 'METRIC ' not in text:
             return False
-        if self.require_gate_on and group_label != 'Baseline':
+        gated_labels = {GROUP_LABELS[group] for group in GATE_GROUPS}
+        if self.require_gate_on and group_label in gated_labels:
             metrics = self.parse_metrics(script_log)
             return metrics.get('gate_on') == '1'
         return True
@@ -257,15 +276,19 @@ class Runner:
             writer = csv.writer(f)
             writer.writerow(row)
 
-    def run_case(self, case: Case, idx: int, total: int) -> None:
+    def run_case(self, case: Case, idx: int, total: int) -> bool:
         csc = self.gen_dir / f'{case.scene}_{case.scale}.csc'
         log = self.log_dir / f'{case.group}_{case.scene}_{case.scale}_seed{case.seed}.log'
         script_log = self.log_dir / f'{case.group}_{case.scene}_{case.scale}_seed{case.seed}.testlog'
+        noise_seed = case.seed if self.prior_noise_seed == 'case' else self.prior_noise_seed
         self.run_cmd([
             sys.executable, str(self.prior_gen), str(csc),
             '--hop-penalty-q8', self.hop_penalty_q8,
             '--relu-threshold-q8', self.relu_threshold_q8,
             '--relu-alpha-q8', self.relu_alpha_q8,
+            '--prior-mode', self.prior_mode,
+            '--coordinate-noise-pct', self.prior_coordinate_noise_pct,
+            '--noise-seed', noise_seed,
         ], check=True)
         cooja_testlog = self.cooja_dir / 'COOJA.testlog'
         cooja_testlog.unlink(missing_ok=True)
@@ -290,13 +313,14 @@ class Runner:
         print(f'[{idx}/{total}] platform={self.platform} group={case.group_label} scene={case.scene_label} scale={case.scale} seed={case.seed} status={proc.returncode} testok={test_ok} wall={wall}s')
         if test_ok:
             self.done_cases.add(case.done_key)
+        return bool(test_ok)
 
     def validate_group(self, group: str) -> None:
         symbol = self.check_exp_symbol()
         print(f'symbol_check={symbol}')
-        if group == 'baseline' and symbol != 'OFF':
-            raise RuntimeError('baseline symbol check failed')
-        if group != 'baseline' and symbol != 'ON':
+        if group not in GATE_GROUPS and symbol != 'OFF':
+            raise RuntimeError(f'gate-off symbol check failed for {group}')
+        if group in GATE_GROUPS and symbol != 'ON':
             raise RuntimeError(f'edge-gate symbol check failed for {group}')
 
     def run(self) -> int:
@@ -315,6 +339,7 @@ class Runner:
                 by_group.setdefault(case.group, []).append(case)
             idx = 0
             total = len(cases)
+            failures = 0
             for group in self.groups:
                 group_cases = by_group.get(group, [])
                 print(f'=== configure group: {group} ===')
@@ -322,16 +347,42 @@ class Runner:
                 self.validate_group(group)
                 for case in group_cases:
                     idx += 1
-                    self.run_case(case, idx, total)
+                    if not self.run_case(case, idx, total):
+                        failures += 1
             self.update_tracker()
+            if failures:
+                print(f'failed_cases={failures}')
+                return 1
             print(f'done: {self.csv_path}')
             return 0
         finally:
             self.restore_conf()
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Run the matched-seed RPL experiment matrix configured by PAPER_* variables."
+    )
+    parser.add_argument(
+        "--list-cases",
+        action="store_true",
+        help="print the resolved cases without building or starting Cooja",
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
+    args = parse_args()
     runner = Runner()
+    if args.list_cases:
+        cases = runner.build_cases()
+        for case in cases:
+            print(
+                f"{case.group_label}\t{case.scene_label}\t"
+                f"{case.scale}\tseed={case.seed}"
+            )
+        print(f"cases={len(cases)}")
+        return 0
     return runner.run()
 
 if __name__ == '__main__':

@@ -1,0 +1,121 @@
+platform,group,scene,scale,seed,test_ok,metric_pdr,metric_avg_delay_ms,metric_recov_ms,metric_gate_cmp,metric_gate_sw
+rpl-lite,Squared-ETX,Local Failure,40,1,1,1.000000,124.195,120104.984,1079636,138
+rpl-lite,Squared-ETX,Local Failure,40,2,1,0.984848,126.094,195256.984,1105700,418
+rpl-lite,Squared-ETX,Local Failure,40,3,1,1.000000,127.122,161242.984,1049426,148
+rpl-lite,Squared-ETX,Local Failure,40,4,1,1.000000,122.986,120899.984,1137857,131
+rpl-lite,Squared-ETX,Local Failure,40,5,1,1.000000,129.456,196125.984,1068580,646
+rpl-lite,Squared-ETX,Local Failure,40,6,1,1.000000,128.281,133806.984,1128160,138
+rpl-lite,Squared-ETX,Local Failure,40,7,1,0.984848,75.067,154470.984,1057916,393
+rpl-lite,Squared-ETX,Local Failure,40,8,1,1.000000,120.982,163094.984,1100508,142
+rpl-lite,Squared-ETX,Local Failure,40,9,1,1.000000,120.665,157152.224,1114212,157
+rpl-lite,Squared-ETX,Local Failure,40,10,1,0.984848,128.756,146427.984,1115992,452
+rpl-lite,Squared-ETX,Local Failure,40,11,1,0.984848,121.368,211059.984,1125857,136
+rpl-lite,Squared-ETX,Local Failure,40,12,1,0.984615,125.779,200294.984,1088864,152
+rpl-lite,Squared-ETX,Local Failure,40,13,1,0.984615,129.428,148312.224,1038638,423
+rpl-lite,Squared-ETX,Local Failure,40,14,1,1.000000,127.494,156886.984,1133667,152
+rpl-lite,Squared-ETX,Local Failure,40,15,1,0.984615,131.732,109195.224,1139040,125
+rpl-lite,Squared-ETX,Local Failure,40,16,1,0.984848,127.425,126297.984,1110469,133
+rpl-lite,Squared-ETX,Local Failure,40,17,1,0.984848,125.356,132991.984,1081111,426
+rpl-lite,Squared-ETX,Local Failure,40,18,1,1.000000,133.342,100613.984,1125481,147
+rpl-lite,Squared-ETX,Local Failure,40,19,1,0.984848,127.275,196774.224,1130669,141
+rpl-lite,Squared-ETX,Local Failure,40,20,1,1.000000,130.467,151057.984,1083592,237
+rpl-lite,Squared-ETX,Root-Loss,40,1,1,0.742424,128.661,171782.984,1007573,649
+rpl-lite,Squared-ETX,Root-Loss,40,2,1,0.738462,124.721,162763.984,955036,680
+rpl-lite,Squared-ETX,Root-Loss,40,3,1,0.727273,130.986,163380.984,966637,728
+rpl-lite,Squared-ETX,Root-Loss,40,4,1,0.742424,88.283,161588.984,1031874,714
+rpl-lite,Squared-ETX,Root-Loss,40,5,1,0.753846,169.314,202087.984,996577,695
+rpl-lite,Squared-ETX,Root-Loss,40,6,1,0.742424,92.241,186509.984,941568,519
+rpl-lite,Squared-ETX,Root-Loss,40,7,1,0.753846,112.865,218193.984,1033773,835
+rpl-lite,Squared-ETX,Root-Loss,40,8,1,0.742424,122.001,186057.984,1059461,853
+rpl-lite,Squared-ETX,Root-Loss,40,9,1,0.742424,126.232,161988.984,1067581,858
+rpl-lite,Squared-ETX,Root-Loss,40,10,1,0.742424,124.654,195532.984,992880,676
+rpl-lite,Squared-ETX,Root-Loss,40,11,1,0.742424,127.819,187554.984,1031079,714
+rpl-lite,Squared-ETX,Root-Loss,40,12,1,0.757576,128.687,166241.984,1033013,753
+rpl-lite,Squared-ETX,Root-Loss,40,13,1,0.723077,127.514,168793.984,1011859,743
+rpl-lite,Squared-ETX,Root-Loss,40,14,1,0.757576,347.036,175067.984,1121301,887
+rpl-lite,Squared-ETX,Root-Loss,40,15,1,0.727273,127.394,215034.984,1026320,784
+rpl-lite,Squared-ETX,Root-Loss,40,16,1,0.742424,126.391,181773.984,1039826,789
+rpl-lite,Squared-ETX,Root-Loss,40,17,1,0.742424,605.911,212919.984,1238829,1072
+rpl-lite,Squared-ETX,Root-Loss,40,18,1,0.707692,118.454,223105.984,1014750,735
+rpl-lite,Squared-ETX,Root-Loss,40,19,1,0.757576,93.078,218518.984,902700,498
+rpl-lite,Squared-ETX,Root-Loss,40,20,1,0.738462,95.607,160682.984,1053671,757
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,1,1,0.993976,46.367,141838.984,5172067,66
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,2,1,0.993976,54.204,138082.984,5210354,78
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,3,1,0.993976,65.678,150820.984,5188839,79
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,4,1,0.993939,58.890,138506.984,5173470,98
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,5,1,0.993939,52.972,174145.984,5109192,97
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,6,1,0.993939,51.946,172977.984,5167073,93
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,7,1,0.993939,56.543,175095.984,5121685,93
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,8,1,0.993939,72.515,164954.984,5085221,96
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,9,1,0.993976,52.198,123952.984,5207673,70
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,10,1,0.993976,73.273,138612.984,4986911,93
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,11,1,0.993976,51.319,151477.984,5208399,62
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,12,1,0.993976,54.343,147000.984,5182439,60
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,13,1,0.993976,56.951,169734.984,5137608,76
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,14,1,0.993939,50.780,140242.984,5218702,60
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,15,1,0.993976,51.325,140641.984,5194500,78
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,16,1,0.993976,49.919,125436.984,5166698,70
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,17,1,0.993939,50.924,122640.984,5145360,82
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,18,1,0.993976,51.298,137989.984,5066356,80
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,19,1,0.993976,57.956,136930.984,5186044,80
+rpl-lite,Squared-ETX,Temporary Root Displacement,40,20,1,0.993976,47.992,145732.984,5195192,88
+rpl-lite,Squared-ETX+Full,Local Failure,40,1,1,1.000000,125.256,126662.984,536809,467
+rpl-lite,Squared-ETX+Full,Local Failure,40,2,1,0.984615,133.042,104172.984,521867,339
+rpl-lite,Squared-ETX+Full,Local Failure,40,3,1,1.000000,132.774,182084.984,494386,365
+rpl-lite,Squared-ETX+Full,Local Failure,40,4,1,1.000000,125.354,112832.224,491339,379
+rpl-lite,Squared-ETX+Full,Local Failure,40,5,1,1.000000,126.880,185421.984,506918,161
+rpl-lite,Squared-ETX+Full,Local Failure,40,6,1,0.984848,129.147,157455.984,496592,135
+rpl-lite,Squared-ETX+Full,Local Failure,40,7,1,0.984615,76.362,105537.984,514815,132
+rpl-lite,Squared-ETX+Full,Local Failure,40,8,1,1.000000,119.441,213959.984,496042,226
+rpl-lite,Squared-ETX+Full,Local Failure,40,9,1,1.000000,121.626,140317.224,510810,169
+rpl-lite,Squared-ETX+Full,Local Failure,40,10,1,0.984615,129.525,201821.984,498069,171
+rpl-lite,Squared-ETX+Full,Local Failure,40,11,1,0.984615,127.592,158186.984,524197,155
+rpl-lite,Squared-ETX+Full,Local Failure,40,12,1,0.984848,127.886,165595.984,523248,158
+rpl-lite,Squared-ETX+Full,Local Failure,40,13,1,0.984848,127.198,124332.984,512146,146
+rpl-lite,Squared-ETX+Full,Local Failure,40,14,1,1.000000,128.486,102221.984,529965,155
+rpl-lite,Squared-ETX+Full,Local Failure,40,15,1,0.984848,130.652,109228.224,502111,135
+rpl-lite,Squared-ETX+Full,Local Failure,40,16,1,0.984848,128.321,155199.984,495918,634
+rpl-lite,Squared-ETX+Full,Local Failure,40,17,1,0.984848,120.329,132971.984,513381,129
+rpl-lite,Squared-ETX+Full,Local Failure,40,18,1,1.000000,129.744,119210.984,492785,145
+rpl-lite,Squared-ETX+Full,Local Failure,40,19,1,0.984848,123.729,196832.984,525509,138
+rpl-lite,Squared-ETX+Full,Local Failure,40,20,1,1.000000,132.729,114270.984,528820,660
+rpl-lite,Squared-ETX+Full,Root-Loss,40,1,1,0.742424,155.790,215567.240,472200,1422
+rpl-lite,Squared-ETX+Full,Root-Loss,40,2,1,0.753846,150.250,214653.240,433707,782
+rpl-lite,Squared-ETX+Full,Root-Loss,40,3,1,0.723077,147.726,172559.240,425746,837
+rpl-lite,Squared-ETX+Full,Root-Loss,40,4,1,0.753846,165.639,170974.240,441994,838
+rpl-lite,Squared-ETX+Full,Root-Loss,40,5,1,0.742424,130.293,190908.984,463401,998
+rpl-lite,Squared-ETX+Full,Root-Loss,40,6,1,0.742424,144.244,165901.240,443665,797
+rpl-lite,Squared-ETX+Full,Root-Loss,40,7,1,0.757576,125.704,195889.240,438438,712
+rpl-lite,Squared-ETX+Full,Root-Loss,40,8,1,0.742424,128.058,210164.984,401177,619
+rpl-lite,Squared-ETX+Full,Root-Loss,40,9,1,0.742424,139.612,189826.240,457339,983
+rpl-lite,Squared-ETX+Full,Root-Loss,40,10,1,0.742424,134.194,192378.496,481314,978
+rpl-lite,Squared-ETX+Full,Root-Loss,40,11,1,0.738462,122.472,166817.984,436852,695
+rpl-lite,Squared-ETX+Full,Root-Loss,40,12,1,0.742424,136.576,197683.480,447984,754
+rpl-lite,Squared-ETX+Full,Root-Loss,40,13,1,0.727273,92.086,181754.984,432845,605
+rpl-lite,Squared-ETX+Full,Root-Loss,40,14,1,0.723077,132.482,221105.984,424972,656
+rpl-lite,Squared-ETX+Full,Root-Loss,40,15,1,0.742424,144.639,162914.992,451542,1081
+rpl-lite,Squared-ETX+Full,Root-Loss,40,16,1,0.727273,131.670,216754.984,415394,507
+rpl-lite,Squared-ETX+Full,Root-Loss,40,17,1,0.738462,407.227,195855.984,443137,740
+rpl-lite,Squared-ETX+Full,Root-Loss,40,18,1,0.727273,123.528,204117.984,435360,632
+rpl-lite,Squared-ETX+Full,Root-Loss,40,19,1,0.753846,160.599,205469.240,465402,837
+rpl-lite,Squared-ETX+Full,Root-Loss,40,20,1,0.723077,131.264,252446.984,440550,968
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,1,1,0.993939,46.795,145345.984,1758736,70
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,2,1,0.993976,46.859,131606.984,1730220,56
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,3,1,0.993976,46.376,129234.984,1745897,66
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,4,1,0.993939,46.173,152787.984,1747713,70
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,5,1,0.993939,73.312,159067.984,1731191,87
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,6,1,0.993976,63.840,129251.984,1740566,95
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,7,1,0.993976,69.853,138654.984,1737144,70
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,8,1,0.993976,46.401,134154.984,1781890,79
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,9,1,0.993976,47.919,160733.984,1702655,82
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,10,1,0.993976,48.451,131046.984,1721174,60
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,11,1,0.993976,46.263,163640.984,1737287,57
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,12,1,0.993976,46.681,167205.984,1773822,55
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,13,1,0.993976,50.550,121767.984,1783971,60
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,14,1,0.993939,46.398,142657.984,1793416,46
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,15,1,0.993976,72.079,170907.984,1755214,54
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,16,1,0.993976,48.870,125802.984,1769615,60
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,17,1,0.993976,46.749,161487.936,1784175,64
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,18,1,0.993976,46.736,120507.984,1765256,59
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,19,1,0.987952,47.706,122653.984,1785039,64
+rpl-lite,Squared-ETX+Full,Temporary Root Displacement,40,20,1,0.993939,47.630,121091.984,1754781,67

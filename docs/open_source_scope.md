@@ -13,10 +13,13 @@
 - `patches/contiki-ng/new-files/tests/14-rpl-lite/*.py`
 - `patches/contiki-ng/new-files/tests/14-rpl-lite/run_*.sh`
 - `patches/contiki-ng/new-files/tests/14-rpl-paper/generate_paper_csc.py`
+- `patches/contiki-ng/new-files/tests/14-rpl-paper/templates/*.csc`
 
 ### Lightweight artifact helpers
 - `artifact/generate_paper_figures.py`
 - `artifact/measure_filter_footprint.py`
+- `artifact/reproduce_paper_tables.py`
+- `data/metrics/*.csv`
 - compact summaries in `artifact/`
 
 ## Exclude
@@ -44,4 +47,5 @@
 
 ## Rationale
 
-The public repository should expose the method and reproduction path, not the entire local working directory. Large result directories and submission assets make ownership, licensing, and reuse boundaries less clear.
+The public repository exposes compact per-seed metrics and deterministic
+scenario inputs, but excludes verbose logs and local build products.

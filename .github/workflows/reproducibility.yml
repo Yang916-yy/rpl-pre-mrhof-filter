@@ -1,0 +1,42 @@
+name: Reproducibility checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Recompute released tables
+        run: python3 artifact/reproduce_paper_tables.py
+
+      - name: Compile Python helpers
+        run: python3 -m compileall -q artifact patches/contiki-ng/new-files/tests
+
+      - name: Prepare pinned Contiki-NG checkout
+        run: |
+          git clone --filter=blob:none https://github.com/contiki-ng/contiki-ng.git /tmp/contiki-ng
+          git -C /tmp/contiki-ng checkout 23e51c4d4e5ea13b0469159805f83cc1ba356449
+          git -C /tmp/contiki-ng submodule update --init tools/cooja
+
+      - name: Apply release and generate scenarios
+        run: |
+          bash scripts/apply_to_contiki_ng.sh /tmp/contiki-ng "$GITHUB_WORKSPACE"
+          python3 /tmp/contiki-ng/tests/14-rpl-paper/generate_paper_csc.py
+          python3 /tmp/contiki-ng/tests/14-rpl-lite/run_paper_matrix.py --help
+          PAPER_GEN_DIR=/tmp/contiki-ng/tests/14-rpl-paper/generated \
+            PAPER_GROUPS="baseline full" \
+            PAPER_SCENES="s2_disturb" \
+            PAPER_SCALES="20" \
+            PAPER_SEEDS="1" \
+            python3 /tmp/contiki-ng/tests/14-rpl-lite/run_paper_matrix.py --list-cases
+
+      - name: Check generated scenarios
+        run: |
+          test -f /tmp/contiki-ng/tests/14-rpl-paper/generated/s1_stable_60.csc
+          test -f /tmp/contiki-ng/tests/14-rpl-paper/generated/s2_disturb_60.csc
+          test -f /tmp/contiki-ng/tests/14-rpl-paper/generated/s3_rootloss_60.csc
+          test -f /tmp/contiki-ng/tests/14-rpl-paper/generated/s5_local_failure_60.csc
